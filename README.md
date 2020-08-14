@@ -7,7 +7,7 @@ Aggregates data scraped from various renewable energy websites, performs computa
 
 ### Prerequisites
 
-ChromeDriver (download at https://chromedriver.chromium.org/downloads)
+ChromeDriver in current directory is for MacOS (download for other operating systems at https://chromedriver.chromium.org/downloads)
 
 Python 3 with Selenium, BeautifulSoup, and XlsxWriter. 
 
