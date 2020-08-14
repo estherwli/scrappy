@@ -1,4 +1,6 @@
 import re
+import argparse
+from argparse import RawTextHelpFormatter
 from io import StringIO
 from datetime import datetime
 from html.parser import HTMLParser
@@ -13,7 +15,7 @@ import glob
 import csv
 from xlsxwriter.workbook import Workbook
 
-DRIVER_PATH = '/chromedriver'
+DRIVER_PATH = './chromedriver'
 ROOT_URL = 'http://data.stats.gov.cn/easyquery.htm?cn=A01'
 ID_NY = 'treeZhiBiao_4_ico' # 能源
 ID_NY_ZHUYAO = 'treeZhiBiao_16_ico' # 能源主要产品产量
@@ -91,7 +93,7 @@ def parse_table(table):
             rows[cur_row].append(line)
             stats_in_row += 1
 
-    # format as csv
+    # format for csv
     csv_string = table_title + '\n' + 'Date'
     for key in rows.keys():
         csv_string += ',' + str(key)
@@ -103,14 +105,16 @@ def parse_table(table):
             csv_string += ',' + rows[key][i]
         csv_string += '\n'
 
-    # write to output file
-    file_name = 'output_' + str(datetime.today())
+    return csv_string
+
+def write_to_csv(file_name, csv_string):
     csv_file = file_name + '.csv'
     f = open(csv_file, 'a')
     f.write(csv_string)
     f.close()  
 
-    # convert to xlsx
+def write_to_xlsx(file_name):
+    csv_file = file_name + '.csv'
     xlsx_file = file_name + '.xlsx'
     workbook = Workbook(xlsx_file)
     worksheet = workbook.add_worksheet()
@@ -121,15 +125,13 @@ def parse_table(table):
                 worksheet.write(r, c, col)
     workbook.close()
 
-
-
 def scrape_table(item):
     table_id = 'table_container_main'
     wait = WebDriverWait(driver, 10)
     wait.until(EC.visibility_of_element_located((By.CLASS_NAME, table_id)))
     table = driver.find_element_by_class_name(table_id).get_attribute('innerHTML')
     result = BeautifulSoup(table, 'html.parser').prettify()
-    parse_table(result)
+    return result
 
 
 def get_ny_item(item):
@@ -137,11 +139,10 @@ def get_ny_item(item):
     wait = WebDriverWait(driver, 10)
     wait.until(EC.element_to_be_clickable((By.ID, ny_item_id)))
     driver.find_element_by_id(ny_item_id).click()
-    scrape_table(item)
+    return scrape_table(item)
 
-
+# open 能源
 def open_ny_list():
-    # open 能源
     ny_wait = WebDriverWait(driver, 20)
     ny_wait.until(EC.element_to_be_clickable((By.ID, ID_NY)))
     driver.find_element_by_id(ID_NY).click()
@@ -153,13 +154,33 @@ def open_ny_list():
 
 
 if __name__ == "__main__":
+    # parse arguments
+    parser = argparse.ArgumentParser(description='Please enter the Pinyin for one or more items from stats.gov.cn 能源 list', 
+    formatter_class=RawTextHelpFormatter)
+    parser.add_argument('nengyuan', type=str, nargs='+',
+    help="'yuanmei': 原煤\n'yuanyou': 原油\n'tianranqi': 天然气\n'meicengqi': 煤层气\n'yehuatianranqi': 液化天然气\n'yuanyoujiagongliang': 原油加工量\n'qiyou': 汽油\n'meiyou': 煤油\n'chaiyou': 柴油\n'ranliaoyou': 燃料油\n'shinaoyou': 石脑油\n'yehuashiyouqi': 液化石油气\n'shiyoujiao': 石油焦\n'shiyouliqing': 石油沥青\n'jiaotan': 焦炭\n'fadianliang': 发电量\n'huoli': 火力发电量\n'shuili': 水力发电量\n'heneng': 核能发电量\n'fengli': 风力发电量\n'taiyangneng': 太阳能发电量\n'meiqi': 煤气")
+
+    args = parser.parse_args()
+    
+    # validate arguments
+    for arg in args.nengyuan:
+        if arg not in ALL_NY_ITEMS:
+            print("ERROR: INVALID ARGUMENT\nUse 'python3 main.py -h' to view a list of acceptable arguments.\nExiting...")
+            exit()
+
     options = Options()
     options.headless = True
-    options.add_argument("--window-size=1920,1200")
+    options.add_argument('--window-size=1920,1200')
 
     # driver = webdriver.Chrome(options=options, executable_path=DRIVER_PATH)
     driver = webdriver.Chrome(executable_path=DRIVER_PATH)
     driver.get(ROOT_URL)
+  
     open_ny_list()
-    get_ny_item('yuanyou')
+    file_name = 'output_' + str(datetime.today())
+    for arg in args.nengyuan:
+        arg_innerHTML = get_ny_item(arg)
+        csv_string = parse_table(arg_innerHTML)
+        write_to_csv(file_name, csv_string)
+    write_to_xlsx(file_name)
     driver.quit()
