@@ -13,7 +13,7 @@ import glob
 import csv
 from xlsxwriter.workbook import Workbook
 
-DRIVER_PATH = '../chromedriver'
+DRIVER_PATH = '/chromedriver'
 ROOT_URL = 'http://data.stats.gov.cn/easyquery.htm?cn=A01'
 ID_NY = 'treeZhiBiao_4_ico' # 能源
 ID_NY_ZHUYAO = 'treeZhiBiao_16_ico' # 能源主要产品产量
@@ -150,9 +150,6 @@ def open_ny_list():
     ny_zhuyao_wait = WebDriverWait(driver, 10)
     ny_zhuyao_wait.until(EC.element_to_be_clickable((By.ID, ID_NY_ZHUYAO)))
     driver.find_element_by_id(ID_NY_ZHUYAO).click()
-    # print(driver.page_source)
-    print(driver.current_url)
-    # driver.quit()
 
 
 if __name__ == "__main__":
